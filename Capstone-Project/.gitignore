@@ -1,0 +1,2 @@
+# Ignored git modules during push
+/app/node_modules

@@ -1,0 +1,27 @@
+[What is Displayed on Main Terminal]
+$ ./run_kubernetes.sh
+NAME                   READY   STATUS    RESTARTS       AGE
+api-6555754fb5-2rch5   1/1     Running   1 (5h9m ago)   5h30m
+Forwarding from 127.0.0.1:8000 -> 80
+Forwarding from [::1]:8000 -> 80
+Handling connection for 8000
+
+[What is Outputted to Kubernete's ..... log]
+$ kubectl logs api-6555754fb5-2rch5
+ * Serving Flask app "app" (lazy loading)
+ * Environment: production
+   WARNING: Do not use the development server in a production environment.
+   Use a production WSGI server instead.
+ * Debug mode: on
+ * Running on http://0.0.0.0:80/ (Press CTRL+C to quit)
+[2022-04-01 15:18:44,940] INFO in app: JSON payload:
+{'CHAS': {'0': 0}, 'RM': {'0': 6.575}, 'TAX': {'0': 296.0}, 'PTRATIO': {'0': 15.3}, 'B': {'0': 396.9}, 'LSTAT': {'0': 4.98}}
+[2022-04-01 15:18:44,973] INFO in app: Inference payload DataFrame:
+   CHAS     RM    TAX  PTRATIO      B  LSTAT
+0     0  6.575  296.0     15.3  396.9   4.98
+[2022-04-01 15:18:44,991] INFO in app: Scaling Payload:
+   CHAS     RM    TAX  PTRATIO      B  LSTAT
+0     0  6.575  296.0     15.3  396.9   4.98
+[2022-04-01 15:18:44,998] INFO in app: Output Prediction:
+20.35373177134412
+127.0.0.1 - - [01/Apr/2022 15:18:45] "POST /predict HTTP/1.1" 200 -

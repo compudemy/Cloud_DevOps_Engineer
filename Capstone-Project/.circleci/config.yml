@@ -1,0 +1,119 @@
+version: 2.1
+orbs:
+  aws-eks: circleci/aws-eks@1.1.0
+  kubernetes: circleci/kubernetes@0.4.0
+
+
+jobs:
+  install-dependencies:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - run:
+          name: app dependencies
+          working_directory: ./app
+          command: npm install
+      - save_cache:
+          paths: [app/node_modules]
+          key: build
+
+  linting:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [ build ]
+
+      - run:
+          name: Lint app
+          working_directory: ./app
+          command: |
+            yarn run lint
+
+      - run:
+          name: Install hadolint
+          command: |
+            sudo wget -O /bin/hadolint https://github.com/hadolint/hadolint/releases/download/v1.16.3/hadolint-Linux-x86_64
+            sudo chmod +x /bin/hadolint
+
+
+      - run:
+          name: Lint Dockerfile
+          command: |
+            hadolint Dockerfile
+  scan-app:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [build]
+      - run:
+          name: scan app
+          working_directory: ./app
+          command: |
+            npm audit fix --force
+
+  build-docker:
+    working_directory: /app
+    docker:
+      - image: docker:17.09.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 19.03.13
+      - deploy:
+          name: Push Docker image
+          command: |
+            DOCKERPATH="arnoldrx/capstone-project"
+            docker build --tag=capstone-project .
+            docker login -u arnoldrx -p "$DOCKER_PASSWORD"
+            docker image tag capstone-project $DOCKERPATH:latest
+            docker image push $DOCKERPATH
+            docker image tag capstone-project $DOCKERPATH:${CIRCLE_WORKFLOW_ID:0:7}
+            docker image push $DOCKERPATH:${CIRCLE_WORKFLOW_ID:0:7}
+
+  deploy:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            install -m 0755 kubectl /bin/kubectl
+
+      - run:
+          name: Update Deployment
+          command: |
+            PROJECT=capstone-project
+            IMAGE="arnoldrx/capstone-project"
+            aws eks --region us-east-1 update-kubeconfig --name Capstone-Cluster
+            aws sts get-caller-identity
+            kubectl apply -f kubernetes/deployment-service.yml
+            kubectl set image deployments/$PROJECT $PROJECT=$IMAGE:${CIRCLE_WORKFLOW_ID:0:7}
+            kubectl get nodes
+            kubectl get pods
+
+
+workflows:
+  default:
+    jobs:
+      - install-dependencies
+      - linting:
+          requires: [ install-dependencies ]
+      - scan-app:
+          requires: [ linting ]
+      - build-docker:
+          requires: [ scan-app ]
+          filters:
+            branches:
+              only: [ main ]
+      - deploy:
+          requires: [ build-docker ]
+          filters:
+            branches:
+              only: [ main ]
