@@ -1,0 +1,5 @@
+CloudFront Domain name: https://d2cdjenjwu9kq.cloudfront.net/
+
+Website Endpoint: http://my-656376745409-bucket.s3-website-us-east-1.amazonaws.com
+
+S3 Object url: https://my-656376745409-bucket.s3.amazonaws.com/index.html
